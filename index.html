@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام المتابعة اليومي للطلاب</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Arabic (Cairo & Tajawal) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Custom Print Media Queries */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 0.8cm;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+                font-size: 11pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-container {
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .printable-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 10px !important;
+            }
+            .printable-table th, .printable-table td {
+                border: 1px solid #1e293b !important;
+                padding: 6px 4px !important;
+                text-align: center !important;
+                font-size: 10pt !important;
+            }
+            .printable-table th {
+                background-color: #f1f5f9 !important;
+                -webkit-print-color-adjust: exact;
+                font-weight: bold !important;
+            }
+            .print-header-box {
+                border: 1px solid #cbd5e1;
+                padding: 12px;
+                border-radius: 6px;
+                margin-bottom: 12px;
+                background-color: #fafafa !important;
+                -webkit-print-color-adjust: exact;
+            }
+            select {
+                border: none !important;
+                background: transparent !important;
+                appearance: none !important;
+                -webkit-appearance: none !important;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-indigo-900 text-white shadow-md no-print border-b border-indigo-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="bg-indigo-600 p-2.5 rounded-xl shadow-inner text-white flex items-center justify-center">
+                    <i class="fa-solid fa-clipboard-user text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">سجل المتابعة اليومي الذكي</h1>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <p class="text-xs text-indigo-200">منظومة متابعة الغياب والتفاعل والواجبات المدرسية</p>
+                        <!-- Cloud Sync Status Indicator -->
+                        <span id="cloudStatus" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <i class="fa-solid fa-cloud text-[9px]"></i>
+                            <span>متزامن سحابياً</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Action Controls -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="togglePasteStudentsModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-paste"></i>
+                    <span>إضافة طلاب (لصق)</span>
+                </button>
+
+                <button onclick="toggleManageClassesModal()" class="bg-indigo-800 hover:bg-indigo-700 text-indigo-100 px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 border border-indigo-700 shadow-sm">
+                    <i class="fa-solid fa-layer-group text-indigo-300"></i>
+                    <span>إدارة الصفوف</span>
+                </button>
+
+                <div class="relative inline-block text-left">
+                    <button onclick="triggerPrint(false)" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-print"></i>
+                        <span>طباعة التقرير</span>
+                    </button>
+                </div>
+
+                <button onclick="triggerPrint(true)" title="طباعة كشف فارغ للكتابة اليدوية" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 border border-slate-600">
+                    <i class="fa-solid fa-file-pen"></i>
+                    <span class="hidden sm:inline">كشف فارغ</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow print-container">
+
+        <!-- Informational / Class Setup Banner -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                
+                <!-- Subject -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">المادة الدراسية</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-book text-slate-400 absolute right-3 top-3 text-sm"></i>
+                        <input type="text" id="subjectInput" value="اللغة الإنجليزية" oninput="autoSaveData(); updateHeaderInfo();"
+                            class="w-full pr-9 pl-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition outline-none font-semibold">
+                    </div>
+                </div>
+
+                <!-- Class / Section Dropdown with Delete Button -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-500">الصف / الشعبة</label>
+                        <button onclick="promptAddNewClass()" class="text-[11px] text-indigo-600 hover:underline font-bold">+ جديد</button>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <div class="relative flex-grow">
+                            <i class="fa-solid fa-graduation-cap text-slate-400 absolute right-3 top-3 text-sm"></i>
+                            <select id="classDropdown" onchange="handleClassSelectChange()"
+                                class="w-full pr-9 pl-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition outline-none font-semibold">
+                                <!-- Populated Dynamically -->
+                            </select>
+                        </div>
+                        <button onclick="deleteCurrentSelectedClass()" title="حذف هذا الصف الحالي" 
+                            class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2.5 rounded-lg text-sm transition flex items-center justify-center">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Teacher Name -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">اسم المعلم / المعلمة</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user-tie text-slate-400 absolute right-3 top-3 text-sm"></i>
+                        <input type="text" id="teacherInput" value="أ. عبدالصمد" oninput="autoSaveData(); updateHeaderInfo();"
+                            class="w-full pr-9 pl-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition outline-none font-semibold">
+                    </div>
+                </div>
+
+                <!-- Date Selector with Quick Buttons -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-500">التاريخ</label>
+                        <div class="flex gap-1 text-[10px]">
+                            <button onclick="setQuickDate('today')" class="text-indigo-600 hover:bg-indigo-50 font-bold px-1 rounded border border-indigo-200">اليوم</button>
+                            <button onclick="setQuickDate('tomorrow')" class="text-slate-600 hover:bg-slate-100 font-bold px-1 rounded border border-slate-200">غداً</button>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-calendar-day text-slate-400 absolute right-3 top-3 text-sm"></i>
+                        <input type="date" id="dateInput" onchange="handleDateChange()"
+                            class="w-full pr-9 pl-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition outline-none font-semibold">
+                    </div>
+                </div>
+
+                <!-- Lesson Period Dropdown -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">الحصة الدراسية</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-clock text-slate-400 absolute right-3 top-3 text-sm"></i>
+                        <select id="periodInput" onchange="autoSaveData(); updateHeaderInfo();"
+                            class="w-full pr-9 pl-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition outline-none font-semibold">
+                            <option value="الحصة الأولى">الحصة الأولى</option>
+                            <option value="الحصة الثانية">الحصة الثانية</option>
+                            <option value="الحصة الثالثة">الحصة الثالثة</option>
+                            <option value="الحصة الرابعة">الحصة الرابعة</option>
+                            <option value="الحصة الخامسة">الحصة الخامسة</option>
+                            <option value="الحصة السادسة">الحصة السادسة</option>
+                            <option value="الحصة السابعة">الحصة السابعة</option>
+                            <option value="الحصة الثامنة">الحصة الثامنة</option>
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Print Header Display (Visible ONLY when printing) -->
+        <div class="print-only print-header-box mb-4">
+            <div class="flex justify-between items-center border-b border-slate-300 pb-3 mb-3">
+                <div class="text-right">
+                    <h1 class="text-xl font-bold text-slate-900">سجل المتابعة اليومي للطلاب</h1>
+                    <p class="text-xs text-slate-600">تقرير الأداء والغياب اليومي التفصيلي</p>
+                </div>
+                <div class="text-left">
+                    <span class="text-xs bg-slate-200 text-slate-800 font-bold px-3 py-1 rounded-md border border-slate-300">
+                        التاريخ: <span id="printDate">--</span>
+                    </span>
+                </div>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-xs font-semibold text-slate-800">
+                <div><span class="text-slate-500">المادة:</span> <span id="printSubject" class="font-bold">--</span></div>
+                <div><span class="text-slate-500">الصف/الشعبة:</span> <span id="printClass" class="font-bold">--</span></div>
+                <div><span class="text-slate-500">الحصة:</span> <span id="printPeriod" class="font-bold">--</span></div>
+                <div><span class="text-slate-500">المعلم:</span> <span id="printTeacher" class="font-bold">--</span></div>
+            </div>
+        </div>
+
+        <!-- Live Metrics Cards (No-Print) -->
+        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 no-print">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase">إجمالي الطلاب</p>
+                    <h3 id="statTotalStudents" class="text-2xl font-extrabold text-slate-800 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase">نسبة الحضور</p>
+                    <h3 id="statAttendanceRate" class="text-2xl font-extrabold text-emerald-600 mt-1">100%</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase">إنجاز الواجبات</p>
+                    <h3 id="statHomeworkRate" class="text-2xl font-extrabold text-blue-600 mt-1">0%</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase">تنبيهات السلوك / النقص</p>
+                    <h3 id="statAlertsCount" class="text-2xl font-extrabold text-amber-500 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions & Toolbar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap justify-between items-center gap-3 no-print">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold text-slate-500 ml-1">إجراءات سريعة:</span>
+                
+                <button onclick="batchSetAttendance('ح')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-200 transition">
+                    <i class="fa-solid fa-check ml-1"></i> رصد الجميع: حاضر
+                </button>
+                
+                <button onclick="batchSetHomework('✓')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-200 transition">
+                    <i class="fa-solid fa-book ml-1"></i> رصد الجميع: أتم الواجب
+                </button>
+
+                <button onclick="batchSetSupplies('كامل')" class="bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-200 transition">
+                    <i class="fa-solid fa-box-archive ml-1"></i> رصد الجميع: مكتمل
+                </button>
+
+                <button onclick="resetAllStatuses()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-300 transition">
+                    <i class="fa-solid fa-rotate-right ml-1"></i> إعادة ضبط الجدول
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="togglePasteStudentsModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1">
+                    <i class="fa-solid fa-paste"></i>
+                    <span>لصق قائمة أسماء</span>
+                </button>
+                <button onclick="addNewStudentRow()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>إضافة طالب فردي</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Interactive Student Tracking Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse printable-table" id="trackerTable">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 text-xs font-bold uppercase border-b border-slate-200">
+                            <th class="py-3.5 px-3 text-center w-12">#</th>
+                            <th class="py-3.5 px-4 min-w-[180px]">اسم الطالب</th>
+                            <th class="py-3.5 px-3 text-center min-w-[130px]">الغياب / الحضور</th>
+                            <th class="py-3.5 px-3 text-center min-w-[120px]">الواجب / التحضير</th>
+                            <th class="py-3.5 px-3 text-center min-w-[140px]">الكتاب والأدوات</th>
+                            <th class="py-3.5 px-3 text-center min-w-[130px]">المشاركة والتفاعل</th>
+                            <th class="py-3.5 px-3 text-center min-w-[130px]">السلوك والأدب</th>
+                            <th class="py-3.5 px-3 min-w-[180px]">ملاحظات المعلم</th>
+                            <th class="py-3.5 px-2 text-center w-12 no-print">حذف</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody" class="divide-y divide-slate-200 text-sm">
+                        <!-- Rows injected dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Legend / Print Footnote -->
+        <div class="mt-6 bg-slate-50 rounded-xl p-4 border border-slate-200 text-xs text-slate-600">
+            <div class="font-bold text-slate-700 mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-indigo-600"></i>
+                <span>مفتاح الرموز المعتمدة في السجل:</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div class="bg-white p-2 rounded border border-slate-200">
+                    <span class="font-bold text-emerald-600">ح</span>: حاضر | <span class="font-bold text-red-600">غ</span>: غائب | <span class="font-bold text-amber-600">ت</span>: متأخر
+                </div>
+                <div class="bg-white p-2 rounded border border-slate-200">
+                    <span class="font-bold text-blue-600">✓</span>: مكتمل | <span class="font-bold text-amber-600">½</span>: جزئي | <span class="font-bold text-red-600">✕</span>: لم ينفذ
+                </div>
+                <div class="bg-white p-2 rounded border border-slate-200">
+                    <span class="font-bold text-indigo-600">3</span>: ممتاز | <span class="font-bold text-blue-600">2</span>: جيد | <span class="font-bold text-amber-600">1</span>: ضعيف
+                </div>
+                <div class="bg-white p-2 rounded border border-slate-200">
+                    <span class="font-bold text-emerald-600">✓</span>: ممتاز | <span class="font-bold text-amber-600">تنبيه</span> | <span class="font-bold text-red-600">مخالفة</span>
+                </div>
+                <div class="bg-white p-2 rounded border border-slate-200 col-span-2 sm:col-span-1">
+                    <span class="text-slate-500">ملاحظة: حفظ تلقائي ومزامنة فورية لكل عملية</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 1. POP-UP MODAL: PASTE MULTIPLE STUDENTS -->
+    <div id="pasteStudentsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden no-print p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all border border-slate-100">
+            <div class="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-paste"></i>
+                    <span>لصق مجموعة أسماء طلاب</span>
+                </h3>
+                <button onclick="togglePasteStudentsModal()" class="text-emerald-200 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">إضافة إلى الصف / الشعبة:</label>
+                    <select id="modalClassTarget" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-emerald-500">
+                        <!-- Dynamic options loaded via JS -->
+                    </select>
+                </div>
+
+                <label class="block text-xs font-bold text-slate-700 mb-1">انسخ قائمة الأسماء من Excel أو Word والصقها هنا (اسم في كل سطر):</label>
+                <textarea id="pastedNamesTextarea" rows="8" 
+                    class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-semibold leading-relaxed"
+                    placeholder="أحمد محمود علي&#10;خالد محمد العمري&#10;زيد عبدالله حسن..."></textarea>
+
+                <div class="mt-4 flex justify-end gap-2">
+                    <button onclick="togglePasteStudentsModal()" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-200">
+                        إلغاء
+                    </button>
+                    <button onclick="submitPastedStudents()" class="bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
+                        <span>إضافة الطلاب فوراً</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. POP-UP MODAL: MANAGE CLASSES -->
+    <div id="manageClassesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden no-print p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all border border-slate-100">
+            <div class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-indigo-300"></i>
+                    <span>إدارة الصفوف والشعب</span>
+                </h3>
+                <button onclick="toggleManageClassesModal()" class="text-indigo-200 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="newClassInputModal" placeholder="اسم الصف الجديد (مثال: العاشر - ج)"
+                        class="flex-grow p-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold">
+                    <button onclick="addClassFromModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold">
+                        إضافة
+                    </button>
+                </div>
+
+                <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100" id="classesListContainer">
+                    <!-- Loaded dynamically -->
+                </div>
+
+                <div class="mt-4 flex justify-end">
+                    <button onclick="toggleManageClassesModal()" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-200">
+                        إغلاق
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toastNotification" class="fixed bottom-5 left-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 no-print">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage" class="text-xs font-semibold">تمت العملية بنجاح</span>
+    </div>
+
+    <!-- Page Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 no-print mt-auto">
+        <p>نظام المتابعة التربوي اليومي - مجهز بالحفظ السحابي والمزامنة الفورية</p>
+    </footer>
+
+    <script>
+        // State Management
+        let availableClasses = ["العاشر - أ", "العاشر - ب", "الأول ثانوي - أ"];
+        let currentSelectedClass = "العاشر - أ";
+        let currentStudents = [];
+
+        // Cycle Configurations
+        const ATTENDANCE_STATES = [
+            { code: 'ح', label: 'حاضر', bg: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            { code: 'غ', label: 'غائب', bg: 'bg-red-100 text-red-800 border-red-300' },
+            { code: 'ت', label: 'متأخر', bg: 'bg-amber-100 text-amber-800 border-amber-300' },
+            { code: 'ع', label: 'بعذر', bg: 'bg-blue-100 text-blue-800 border-blue-300' }
+        ];
+
+        const HOMEWORK_STATES = [
+            { code: '✓', label: 'أتم الواجب', bg: 'bg-blue-100 text-blue-800 border-blue-300' },
+            { code: '½', label: 'جزئي', bg: 'bg-amber-100 text-amber-800 border-amber-300' },
+            { code: '✕', label: 'لم ينجز', bg: 'bg-red-100 text-red-800 border-red-300' }
+        ];
+
+        const SUPPLIES_STATES = [
+            { code: 'كامل', label: 'أحضر الجميع', bg: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+            { code: 'طالب', label: 'كتاب الطالب فقط', bg: 'bg-blue-100 text-blue-800 border-blue-300' },
+            { code: 'تمارين', label: 'كتاب التمارين فقط', bg: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
+            { code: 'دفتر', label: 'الدفتر فقط', bg: 'bg-purple-100 text-purple-800 border-purple-300' },
+            { code: 'نقص', label: 'نقص في الأدوات', bg: 'bg-amber-100 text-amber-800 border-amber-300' },
+            { code: '✕', label: 'لم يحضر شيء', bg: 'bg-red-100 text-red-800 border-red-300' }
+        ];
+
+        const PARTICIPATION_STATES = [
+            { code: '3', label: 'ممتاز (3)', bg: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            { code: '2', label: 'جيد (2)', bg: 'bg-blue-100 text-blue-800 border-blue-300' },
+            { code: '1', label: 'ضعيف (1)', bg: 'bg-amber-100 text-amber-800 border-amber-300' },
+            { code: '0', label: 'عدم تفاعل (0)', bg: 'bg-slate-100 text-slate-700 border-slate-300' }
+        ];
+
+        const BEHAVIOR_STATES = [
+            { code: '✓', label: 'ملتزم ومؤدب', bg: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            { code: 'حركة', label: 'كثير الحركة', bg: 'bg-amber-100 text-amber-800 border-amber-300' },
+            { code: 'مشاغب', label: 'مشاغب', bg: 'bg-orange-100 text-orange-800 border-orange-300' },
+            { code: '!', label: 'تنبيه سلوكي', bg: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+            { code: '✕', label: 'مخالفة كبيرة', bg: 'bg-red-100 text-red-800 border-red-300' }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setQuickDate('today', false);
+            loadClassesFromStorage();
+            loadClassData(currentSelectedClass);
+            updateHeaderInfo();
+        });
+
+        // Date Shortcuts
+        function setQuickDate(type, triggerSync = true) {
+            const dateInput = document.getElementById('dateInput');
+            const targetDate = new Date();
+            if (type === 'tomorrow') {
+                targetDate.setDate(targetDate.getDate() + 1);
+            }
+            dateInput.value = targetDate.toISOString().split('T')[0];
+            if (triggerSync) {
+                handleDateChange();
+            }
+        }
+
+        function handleDateChange() {
+            autoSaveData();
+            updateHeaderInfo();
+            showToast('تم تحديث التاريخ وحفظ البيانات تلقائياً');
+        }
+
+        // Classes & Dropdown Logic
+        function loadClassesFromStorage() {
+            const savedClasses = localStorage.getItem('app_classes_list');
+            if (savedClasses) {
+                try {
+                    const parsed = JSON.parse(savedClasses);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        availableClasses = parsed;
+                    }
+                } catch(e) {}
+            }
+            renderClassesDropdown();
+        }
+
+        function renderClassesDropdown() {
+            const dropdown = document.getElementById('classDropdown');
+            const modalTarget = document.getElementById('modalClassTarget');
+            dropdown.innerHTML = '';
+            modalTarget.innerHTML = '';
+
+            availableClasses.forEach(cls => {
+                const opt1 = document.createElement('option');
+                opt1.value = cls;
+                opt1.textContent = cls;
+                if (cls === currentSelectedClass) opt1.selected = true;
+                dropdown.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = cls;
+                opt2.textContent = cls;
+                if (cls === currentSelectedClass) opt2.selected = true;
+                modalTarget.appendChild(opt2);
+            });
+        }
+
+        function handleClassSelectChange() {
+            const dropdown = document.getElementById('classDropdown');
+            currentSelectedClass = dropdown.value;
+            loadClassData(currentSelectedClass);
+            updateHeaderInfo();
+            autoSaveData();
+        }
+
+        function promptAddNewClass() {
+            const name = prompt("أدخل اسم الصف أو الشعبة الجديدة:");
+            if (name && name.trim() !== "") {
+                const trimmed = name.trim();
+                if (!availableClasses.includes(trimmed)) {
+                    availableClasses.push(trimmed);
+                    localStorage.setItem('app_classes_list', JSON.stringify(availableClasses));
+                    renderClassesDropdown();
+                }
+                currentSelectedClass = trimmed;
+                document.getElementById('classDropdown').value = trimmed;
+                loadClassData(currentSelectedClass);
+                showToast(`تمت إضافة ${trimmed} وتحديده`);
+            }
+        }
+
+        // حذف الصف المحدد حالياً بشكل مباشر من الواجهة
+        function deleteCurrentSelectedClass() {
+            if (availableClasses.length <= 1) {
+                alert("لا يمكن حذف الصف الوحيد المتبقي في النظام.");
+                return;
+            }
+
+            if (confirm(`هل أنت تأكد من حذف الصف "${currentSelectedClass}" بجميع بيانات طلابه؟`)) {
+                const targetIndex = availableClasses.indexOf(currentSelectedClass);
+                if (targetIndex !== -1) {
+                    const key = getStorageKey(currentSelectedClass);
+                    localStorage.removeItem(key); // حذف بيانات طلاب الصف
+
+                    const removedClass = availableClasses.splice(targetIndex, 1)[0];
+                    localStorage.setItem('app_classes_list', JSON.stringify(availableClasses));
+
+                    currentSelectedClass = availableClasses[0];
+                    renderClassesDropdown();
+                    loadClassData(currentSelectedClass);
+                    updateHeaderInfo();
+                    showToast(`تم حذف صف "${removedClass}" بنجاح`);
+                }
+            }
+        }
+
+        // Student Roster & Data Loading per Class
+        function getStorageKey(className) {
+            return `roster_data_${className.replace(/\s+/g, '_')}`;
+        }
+
+        function loadClassData(className) {
+            const key = getStorageKey(className);
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                try {
+                    currentStudents = JSON.parse(saved);
+                } catch(e) {
+                    currentStudents = [];
+                }
+            } else {
+                currentStudents = [
+                    { id: Date.now() + 1, name: "أحمد عبد الرحمن السعدي", attendance: 'ح', homework: '✓', supplies: 'كامل', participation: '3', behavior: '✓', notes: '' },
+                    { id: Date.now() + 2, name: "إبراهيم خالد المناصير", attendance: 'ح', homework: '✓', supplies: 'طالب', participation: '3', behavior: 'حركة', notes: '' },
+                    { id: Date.now() + 3, name: "حمزة محمد الزهراني", attendance: 'ح', homework: '✓', supplies: 'دفتر', participation: '2', behavior: 'مشاغب', notes: '' }
+                ];
+            }
+            renderTable();
+        }
+
+        // Automatic Cloud Save Simulation
+        function autoSaveData() {
+            const key = getStorageKey(currentSelectedClass);
+            localStorage.setItem(key, JSON.stringify(currentStudents));
+            
+            const cloudEl = document.getElementById('cloudStatus');
+            cloudEl.classList.remove('bg-emerald-500/20', 'text-emerald-300');
+            cloudEl.classList.add('bg-amber-500/20', 'text-amber-300');
+            cloudEl.querySelector('span').textContent = 'جاري المزامنة...';
+
+            setTimeout(() => {
+                cloudEl.classList.remove('bg-amber-500/20', 'text-amber-300');
+                cloudEl.classList.add('bg-emerald-500/20', 'text-emerald-300');
+                cloudEl.querySelector('span').textContent = 'متزامن سحابياً';
+            }, 300);
+        }
+
+        // Generate Dropdown Select HTML Helper
+        function createDropdownSelect(index, field, options, currentValue) {
+            const currentObj = getStatusObj(options, currentValue);
+            const optionsHtml = options.map(opt => `
+                <option value="${opt.code}" ${opt.code === currentValue ? 'selected' : ''}>
+                    ${opt.label}
+                </option>
+            `).join('');
+
+            return `
+                <select onchange="handleSelectChange(${index}, '${field}', this)" 
+                    class="px-2 py-1.5 rounded-lg text-xs font-bold border ${currentObj.bg} shadow-sm w-36 outline-none cursor-pointer text-center font-semibold transition">
+                    ${optionsHtml}
+                </select>
+            `;
+        }
+
+        // Handle Change Event for Dropdowns
+        function handleSelectChange(index, field, selectElement) {
+            const selectedVal = selectElement.value;
+            currentStudents[index][field] = selectedVal;
+            
+            let statesArray;
+            if (field === 'attendance') statesArray = ATTENDANCE_STATES;
+            else if (field === 'homework') statesArray = HOMEWORK_STATES;
+            else if (field === 'supplies') statesArray = SUPPLIES_STATES;
+            else if (field === 'participation') statesArray = PARTICIPATION_STATES;
+            else if (field === 'behavior') statesArray = BEHAVIOR_STATES;
+
+            const selectedObj = getStatusObj(statesArray, selectedVal);
+            selectElement.className = `px-2 py-1.5 rounded-lg text-xs font-bold border ${selectedObj.bg} shadow-sm w-36 outline-none cursor-pointer text-center font-semibold transition`;
+
+            updateMetrics();
+            autoSaveData();
+        }
+
+        // Render Table Rows
+        function renderTable() {
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+
+            if (currentStudents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="py-8 text-center text-slate-400 font-semibold">
+                            لا يوجد طلاب في هذا الصف حالياً. انقر على "إضافة طلاب (لصق)" لإضافة القائمة فوراً.
+                        </td>
+                    </tr>
+                `;
+                updateMetrics();
+                return;
+            }
+
+            currentStudents.forEach((student, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-200";
+
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-center font-bold text-slate-400 text-xs">${index + 1}</td>
+                    
+                    <td class="py-3 px-4 font-semibold text-slate-800">
+                        <input type="text" value="${escapeHtml(student.name)}" 
+                            onchange="updateStudentName(${index}, this.value)"
+                            class="w-full bg-transparent hover:bg-white focus:bg-white border-b border-transparent hover:border-slate-300 focus:border-indigo-500 rounded px-1 py-0.5 outline-none font-bold text-slate-800">
+                    </td>
+
+                    <td class="py-3 px-3 text-center">
+                        ${createDropdownSelect(index, 'attendance', ATTENDANCE_STATES, student.attendance)}
+                    </td>
+
+                    <td class="py-3 px-3 text-center">
+                        ${createDropdownSelect(index, 'homework', HOMEWORK_STATES, student.homework)}
+                    </td>
+
+                    <td class="py-3 px-3 text-center">
+                        ${createDropdownSelect(index, 'supplies', SUPPLIES_STATES, student.supplies)}
+                    </td>
+
+                    <td class="py-3 px-3 text-center">
+                        ${createDropdownSelect(index, 'participation', PARTICIPATION_STATES, student.participation)}
+                    </td>
+
+                    <td class="py-3 px-3 text-center">
+                        ${createDropdownSelect(index, 'behavior', BEHAVIOR_STATES, student.behavior)}
+                    </td>
+
+                    <td class="py-3 px-3">
+                        <input type="text" value="${escapeHtml(student.notes || '')}" placeholder="أضف ملاحظة..."
+                            onchange="updateStudentNotes(${index}, this.value)"
+                            class="w-full text-xs bg-slate-50 focus:bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </td>
+
+                    <td class="py-3 px-2 text-center no-print">
+                        <button onclick="deleteStudentRow(${index})" class="text-slate-400 hover:text-red-500 transition px-2 py-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateMetrics();
+        }
+
+        function getStatusObj(statesArray, code) {
+            return statesArray.find(s => s.code === code) || statesArray[0];
+        }
+
+        // Row Updates
+        function updateStudentName(index, val) {
+            currentStudents[index].name = val.trim();
+            autoSaveData();
+        }
+
+        function updateStudentNotes(index, val) {
+            currentStudents[index].notes = val.trim();
+            autoSaveData();
+        }
+
+        function deleteStudentRow(index) {
+            if (confirm("هل أنت تأكد من حذف هذا الطالب من السجل؟")) {
+                currentStudents.splice(index, 1);
+                renderTable();
+                autoSaveData();
+                showToast("تم حذف الطالب بنجاح");
+            }
+        }
+
+        function addNewStudentRow() {
+            currentStudents.push({
+                id: Date.now(),
+                name: "طالب جديد",
+                attendance: 'ح',
+                homework: '✓',
+                supplies: 'كامل',
+                participation: '3',
+                behavior: '✓',
+                notes: ''
+            });
+            renderTable();
+            autoSaveData();
+        }
+
+        // Modal: Paste Students
+        function togglePasteStudentsModal() {
+            const modal = document.getElementById('pasteStudentsModal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('pastedNamesTextarea').focus();
+            }
+        }
+
+        function submitPastedStudents() {
+            const textarea = document.getElementById('pastedNamesTextarea');
+            const targetClass = document.getElementById('modalClassTarget').value;
+            const text = textarea.value.trim();
+
+            if (!text) {
+                alert("يرجى لصق الأعلام أو الأسماء أولاً.");
+                return;
+            }
+
+            const names = text.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            
+            if (names.length === 0) return;
+
+            const key = getStorageKey(targetClass);
+            let targetList = [];
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                try { targetList = JSON.parse(saved); } catch(e) {}
+            }
+
+            names.forEach((name, idx) => {
+                targetList.push({
+                    id: Date.now() + idx,
+                    name: name,
+                    attendance: 'ح',
+                    homework: '✓',
+                    supplies: 'كامل',
+                    participation: '3',
+                    behavior: '✓',
+                    notes: ''
+                });
+            });
+
+            localStorage.setItem(key, JSON.stringify(targetList));
+
+            if (targetClass === currentSelectedClass) {
+                currentStudents = targetList;
+                renderTable();
+            } else {
+                currentSelectedClass = targetClass;
+                document.getElementById('classDropdown').value = targetClass;
+                currentStudents = targetList;
+                renderTable();
+            }
+
+            autoSaveData();
+            textarea.value = '';
+            togglePasteStudentsModal();
+            showToast(`تم إضافة ${names.length} طالب بنجاح إلى ${targetClass}`);
+        }
+
+        // Modal: Manage Classes
+        function toggleManageClassesModal() {
+            const modal = document.getElementById('manageClassesModal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                renderClassesListInModal();
+            }
+        }
+
+        function renderClassesListInModal() {
+            const container = document.getElementById('classesListContainer');
+            container.innerHTML = '';
+
+            availableClasses.forEach((cls, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-3 hover:bg-slate-50";
+                div.innerHTML = `
+                    <span class="text-sm font-bold text-slate-700">${escapeHtml(cls)}</span>
+                    ${availableClasses.length > 1 ? `
+                        <button onclick="removeClassFromModal(${idx})" class="text-xs text-red-500 hover:text-red-700 font-bold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    ` : '<span class="text-[10px] text-slate-400">الصف الوحيد</span>'}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addClassFromModal() {
+            const input = document.getElementById('newClassInputModal');
+            const val = input.value.trim();
+            if (val && !availableClasses.includes(val)) {
+                availableClasses.push(val);
+                localStorage.setItem('app_classes_list', JSON.stringify(availableClasses));
+                renderClassesDropdown();
+                renderClassesListInModal();
+                input.value = '';
+                showToast("تمت إضافة الصف بنجاح");
+            }
+        }
+
+        function removeClassFromModal(index) {
+            if (confirm(`هل أنت تأكد من حذف "${availableClasses[index]}"؟`)) {
+                const removed = availableClasses.splice(index, 1)[0];
+                
+                // حذف بيانات طلاب الصف المحذوف
+                const key = getStorageKey(removed);
+                localStorage.removeItem(key);
+
+                localStorage.setItem('app_classes_list', JSON.stringify(availableClasses));
+                if (currentSelectedClass === removed && availableClasses.length > 0) {
+                    currentSelectedClass = availableClasses[0];
+                    loadClassData(currentSelectedClass);
+                }
+                renderClassesDropdown();
+                renderClassesListInModal();
+                showToast("تم حذف الصف");
+            }
+        }
+
+        // Batch Operations
+        function batchSetAttendance(code) {
+            currentStudents.forEach(s => s.attendance = code);
+            renderTable();
+            autoSaveData();
+        }
+
+        function batchSetHomework(code) {
+            currentStudents.forEach(s => s.homework = code);
+            renderTable();
+            autoSaveData();
+        }
+
+        function batchSetSupplies(code) {
+            currentStudents.forEach(s => s.supplies = code);
+            renderTable();
+            autoSaveData();
+        }
+
+        function resetAllStatuses() {
+            if (confirm("هل ترغب بإعادة ضبط كافة حالات الطلاب للوضع الافتراضي اليوم؟")) {
+                currentStudents.forEach(s => {
+                    s.attendance = 'ح';
+                    s.homework = '✓';
+                    s.supplies = 'كامل';
+                    s.participation = '3';
+                    s.behavior = '✓';
+                    s.notes = '';
+                });
+                renderTable();
+                autoSaveData();
+                showToast("تم إعادة الضبط الكلي");
+            }
+        }
+
+        // Live Dashboard Statistics
+        function updateMetrics() {
+            const total = currentStudents.length;
+            document.getElementById('statTotalStudents').textContent = total;
+
+            if (total === 0) {
+                document.getElementById('statAttendanceRate').textContent = "100%";
+                document.getElementById('statHomeworkRate').textContent = "0%";
+                document.getElementById('statAlertsCount').textContent = "0";
+                return;
+            }
+
+            const present = currentStudents.filter(s => s.attendance === 'ح' || s.attendance === 'ت').length;
+            const attRate = Math.round((present / total) * 100);
+            document.getElementById('statAttendanceRate').textContent = `${attRate}%`;
+
+            const hwDone = currentStudents.filter(s => s.homework === '✓').length;
+            const hwRate = Math.round((hwDone / total) * 100);
+            document.getElementById('statHomeworkRate').textContent = `${hwRate}%`;
+
+            const alerts = currentStudents.filter(s => s.behavior === '!' || s.behavior === '✕' || s.behavior === 'مشاغب' || s.behavior === 'حركة' || s.attendance === 'غ').length;
+            document.getElementById('statAlertsCount').textContent = alerts;
+        }
+
+        // Header Sync for Print Mode
+        function updateHeaderInfo() {
+            document.getElementById('printSubject').textContent = document.getElementById('subjectInput').value || '--';
+            document.getElementById('printClass').textContent = currentSelectedClass || '--';
+            document.getElementById('printTeacher').textContent = document.getElementById('teacherInput').value || '--';
+            document.getElementById('printDate').textContent = document.getElementById('dateInput').value || '--';
+            document.getElementById('printPeriod').textContent = document.getElementById('periodInput').value || '--';
+        }
+
+        // Printing Trigger
+        function triggerPrint(blankMode = false) {
+            updateHeaderInfo();
+            if (blankMode) {
+                const originalBody = document.getElementById('studentTableBody').innerHTML;
+                const tbody = document.getElementById('studentTableBody');
+                tbody.innerHTML = '';
+                for (let i = 1; i <= 25; i++) {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="py-2.5 px-2 text-center text-xs font-bold">${i}</td>
+                            <td class="py-2.5 px-4"></td>
+                            <td class="py-2.5 px-2"></td>
+                            <td class="py-2.5 px-2"></td>
+                            <td class="py-2.5 px-2"></td>
+                            <td class="py-2.5 px-2"></td>
+                            <td class="py-2.5 px-2"></td>
+                            <td class="py-2.5 px-2"></td>
+                        </tr>
+                    `;
+                }
+                window.print();
+                document.getElementById('studentTableBody').innerHTML = originalBody;
+            } else {
+                window.print();
+            }
+        }
+
+        // Helpers
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
